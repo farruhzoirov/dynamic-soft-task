@@ -62,7 +62,7 @@ export class StatisticsService {
 
 
 
-    async getDailySales(adminId: number, startDate?: , endDate?: Date): Promise<any> {
+    async getDailySales(adminId: number, startDate?: Date, endDate?: Date): Promise<any> {
         const stores = await this.storeRepository.find({
             where: {admin_id: adminId},
             relations: ['categories', 'categories.products'],
