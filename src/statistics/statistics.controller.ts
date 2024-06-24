@@ -1,6 +1,7 @@
-import {Controller, Get, UseGuards, Req, Query} from '@nestjs/common';
+import {Controller, Get, UseGuards, Req, Query, Post, Body} from '@nestjs/common';
 import { StatisticsService } from './statistics.service';
 import {AdminGuard} from "../guards/admin.guard";
+import {DateRangeDto} from "./dto/statistics.dto";
 
 
 
@@ -22,16 +23,27 @@ export class StatisticsController {
         return this.statisticsService.getAdminProductsWithCount(user.user_id);
     }
 
-    @Get('daily-sales')
+    // @Get('daily-sales')
+    // @UseGuards(AdminGuard)
+    // async getDailySales(
+    //     @Req() req: any,
+    //     @Query('startDate') startDate?: string,
+    //     @Query('endDate') endDate?: string,
+    // ) {
+    //     const user = req.user;
+    //     const start = startDate ? new Date(startDate) : undefined;
+    //     const end = endDate ? new Date(endDate) : undefined;
+    //     return this.statisticsService.getDailySales(user.user_id, start, end);
+    // }
+
+    @Post('daily-sales')
     @UseGuards(AdminGuard)
     async getDailySales(
         @Req() req: any,
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string,
+        @Body() dateRangeDto: DateRangeDto,
     ) {
         const user = req.user;
-        const start = startDate ? new Date(startDate) : undefined;
-        const end = endDate ? new Date(endDate) : undefined;
-        return this.statisticsService.getDailySales(user.user_id, start, end);
+        const { startDate, endDate } = dateRangeDto;
+        return this.statisticsService.getDailySales(user.user_id, startDate, endDate);
     }
 }
