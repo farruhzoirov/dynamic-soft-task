@@ -44,6 +44,9 @@ export class StatisticsController {
     ) {
         const user = req.user;
         const { startDate, endDate } = dateRangeDto;
-        return this.statisticsService.getDailySales(user.user_id, startDate, endDate);
+        const start = startDate ? new Date(startDate) : undefined;
+        const end = endDate ? new Date(endDate) : undefined;
+        return this.statisticsService.getDailySales(user.user_id, start, end);
     }
+
 }
