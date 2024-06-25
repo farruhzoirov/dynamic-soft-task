@@ -12,9 +12,14 @@ export class ProductsService {
         private readonly productRepository: Repository<Product>,
     ) {}
 
-    async findAll(): Promise<Product[]> {
+    async findAll(){
         try {
-            return await this.productRepository.find();
+            const allProducts =  await this.productRepository.find();
+             return {
+                 status: HttpStatus.OK,
+                 message: 'All products',
+                 data: allProducts
+             }
         } catch (error) {
             throw new InternalServerErrorException('Error retrieving products', error.message);
         }
@@ -32,13 +37,19 @@ export class ProductsService {
         }
     }
 
-    async create(createProductDto: CreateProductDto, imagePath: string): Promise<Product> {
+    async create(createProductDto: CreateProductDto, imagePath: string) {
         try {
             const product = this.productRepository.create({
                 ...createProductDto,
                 image: imagePath,
             });
-            return await this.productRepository.save(product);
+             await this.productRepository.save(product);
+
+            return  {
+                statusCode: HttpStatus.CREATED,
+                message: `Product was created successfully`,
+            }
+
         } catch (error) {
             throw new InternalServerErrorException('Error creating product', error.message);
         }
