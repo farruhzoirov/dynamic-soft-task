@@ -1,11 +1,11 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { UserEntity } from '../entities/users.entity';
+import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
+import {JwtService} from '@nestjs/jwt';
+import {UsersService} from '../users/users.service';
+import {UserEntity} from '../entities/users.entity';
 import * as bcrypt from 'bcryptjs';
-import { AuthDto } from './dto/auth.dto';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import {AuthDto} from './dto/auth.dto';
+import {Repository} from 'typeorm';
+import {InjectRepository} from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
@@ -14,44 +14,49 @@ export class AuthService {
         private readonly userRepo: Repository<UserEntity>,
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
-    ) {}
+    ) {
+    }
 
     async register(authDto: AuthDto) {
-        const { username, password } = authDto;
+        const {username, password} = authDto;
 
-        const existingUser = await this.userRepo.findOne({ where: { username } });
+        const existingUser = await this.userRepo.findOne({where: {username}});
         if (existingUser) {
-            return { message: 'Username already taken' };
+            return {message: 'Username already taken'};
         }
 
         const hashPass = await bcrypt.hash(password, 12);
-        const data = this.userRepo.create({ username, password: hashPass });
+        const data = this.userRepo.create({username, password: hashPass});
 
         try {
             await this.userRepo.save(data);
 
             const accessToken = this.jwtService.sign(
-                { user_id: data.id },
-                { expiresIn: '30m' },
+                {user_id: data.id},
+                {expiresIn: '30m'},
             );
 
             return {
                 message: 'User created successfully',
-                data: { id: data.id, username: data.username },
+                data: {id: data.id, username: data.username},
                 accessToken,
             };
-        } catch (error) {
-            // Handle any errors
-            return { message: 'Error creating user', error: error.message };
+        } catch (e) {
+            // Handle any error
+            throw new HttpException({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                error: 'Error creating user',
+                message: e.message,
+            }, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
 
     async login(authDto: AuthDto) {
         try {
-            const { username, password } = authDto;
+            const {username, password} = authDto;
 
-            const findUser = await this.userRepo.findOne({ where: { username } });
+            const findUser = await this.userRepo.findOne({where: {username}});
             if (!findUser) throw new HttpException('User not found!', 404);
 
             const verifyPass = await bcrypt.compare(password, findUser.password);
@@ -60,14 +65,18 @@ export class AuthService {
             }
 
             const accessToken = this.jwtService.sign(
-                { user_id: findUser.id, role: findUser.role },
-                { expiresIn: '1h' },
+                {user_id: findUser.id, role: findUser.role},
+                {expiresIn: '1h'},
             );
 
-            return { accessToken };
+            return {accessToken};
         } catch (e) {
-            console.log('Login service', e)
-            return
+            // Handle any error
+            throw new HttpException({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                error: 'Error in login user',
+                message: e.message,
+            }, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }
