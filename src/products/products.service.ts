@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {Injectable, NotFoundException, InternalServerErrorException, HttpStatus} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../entities/products.entity';
-import { CreateProductDto } from './dto/product.dto';
-import { UpdateProductDto } from './dto/product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import * as fs from "node:fs";
 
 @Injectable()
@@ -11,47 +10,77 @@ export class ProductsService {
     constructor(
         @InjectRepository(Product)
         private readonly productRepository: Repository<Product>,
-    ) {
-    }
+    ) {}
 
     async findAll(): Promise<Product[]> {
-        return this.productRepository.find();
+        try {
+            return await this.productRepository.find();
+        } catch (error) {
+            throw new InternalServerErrorException('Error retrieving products', error.message);
+        }
     }
 
     async findOne(id: number): Promise<Product> {
-        const product = await this.productRepository.findOne({where: {id}});
-        if (!product) {
-            throw new NotFoundException(`Product with ID ${id} not found`);
+        try {
+            const product = await this.productRepository.findOne({ where: { id } });
+            if (!product) {
+                throw new NotFoundException(`Product with ID ${id} not found`);
+            }
+            return product;
+        } catch (error) {
+            throw new InternalServerErrorException('Error retrieving product', error.message);
         }
-        return product;
     }
 
     async create(createProductDto: CreateProductDto, imagePath: string): Promise<Product> {
-        const product = this.productRepository.create({
-            ...createProductDto,
-            image: imagePath,
-        });
-        return this.productRepository.save(product);
+        try {
+            const product = this.productRepository.create({
+                ...createProductDto,
+                image: imagePath,
+            });
+            return await this.productRepository.save(product);
+        } catch (error) {
+            throw new InternalServerErrorException('Error creating product', error.message);
+        }
     }
 
-    async update(id: number, updateProductDto: UpdateProductDto, imagePath?: string): Promise<Product> {
-        const product = await this.findOne(id);
-        if (imagePath) {
-            updateProductDto.image = imagePath;
+    async update(id: number, updateProductDto: UpdateProductDto, imagePath?: string) {
+        try {
+            const product = await this.findOne(id);
+            if (imagePath) {
+                updateProductDto.image = imagePath;
+            }
+            Object.assign(product, updateProductDto);
+             await this.productRepository.save(product);
+
+             return  {
+                 statusCode: HttpStatus.OK,
+                 message: `Product was updated successfully`,
+             }
+
+        } catch (error) {
+            throw new InternalServerErrorException('Error updating product', error.message);
         }
-        Object.assign(product, updateProductDto);
-        return this.productRepository.save(product);
     }
 
-    async remove(id: number): Promise<void> {
-        const product = await this.productRepository.findOne({where: {id: id}});
-        if (!product) {
-            throw new NotFoundException(`Product with ID ${id} not found`);
-        }
-        if (product.image) {
-            fs.unlinkSync(product.image);
-        }
+    async remove(id: number) {
+        try {
+            const product = await this.productRepository.findOne({ where: { id: id } });
+            if (!product) {
+                throw new NotFoundException(`Product with ID ${id} not found`);
+            }
+            if (product.image) {
+                fs.unlinkSync(product.image);
+            }
 
-        await this.productRepository.remove(product);
+            await this.productRepository.remove(product);
+
+            return {
+                statusCode: HttpStatus.OK,
+                message: 'Product removed successfully',
+            }
+        } catch (error) {
+            throw new InternalServerErrorException('Error removing product', error.message);
+        }
     }
 }
